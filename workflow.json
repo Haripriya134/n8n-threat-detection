@@ -1,0 +1,602 @@
+{
+  "name": "Malware Detection Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Threat Check Tool",
+        "formDescription": "Submit a file, URL or email to check for threats. ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "URL"
+            },
+            {
+              "fieldLabel": "File",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "={{ $json.verdict }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dda4af58-58e2-4488-8b19-363587a813a4",
+      "name": "On form submission",
+      "webhookId": "8256b3f5-f736-4b1e-9512-d654d8662ea8"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "httpVariantWarning": "",
+        "method": "POST",
+        "url": "https://www.virustotal.com/api/v3/urls",
+        "": "",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "virusTotalApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.URL }}"
+            }
+          ]
+        },
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "52da4fd0-5544-455f-a7fb-f63dd9a4b716",
+      "name": "VirusTotal HTTP Request",
+      "extendsCredential": "virusTotalApi",
+      "credentials": {
+        "virusTotalApi": {
+          "id": "TpAWyL56y14FwFwh",
+          "name": "VirusTotal account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "f424f741-8333-4a82-8a94-0d38190a6503",
+      "name": "Wait",
+      "webhookId": "2a6ea2a1-3e03-480b-89c5-b1dbbe1dc3bc"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "httpVariantWarning": "",
+        "method": "GET",
+        "url": "=https://www.virustotal.com/api/v3/analyses/{{ $json.data.id }}",
+        "": "",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "virusTotalApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": false,
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "366fce1e-4cfb-42ba-887f-622d0daccb49",
+      "name": "VirusTotal HTTP Request1",
+      "extendsCredential": "virusTotalApi",
+      "credentials": {
+        "virusTotalApi": {
+          "id": "TpAWyL56y14FwFwh",
+          "name": "VirusTotal account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "15d1017a-d9c8-4262-9a0f-7810bb65bae7",
+              "name": "scanned_url",
+              "value": "={{ $('On form submission').item.json.URL }}",
+              "type": "string"
+            },
+            {
+              "id": "9e3541db-37ad-4da8-909e-8144d6f70363",
+              "name": "malicious_count",
+              "value": "={{ $json.data.attributes.stats.malicious }}",
+              "type": "number"
+            },
+            {
+              "id": "a3b2d939-99b7-4183-b64b-9d9eeaf826d1",
+              "name": "verdict",
+              "value": "={{ $json.data.attributes.stats.malicious > 0 ? \"Malicious\" : \"Clean\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "192af7d6-c837-486b-985a-f0be524f17dc",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "https://api.abuseipdb.com/api/v2/check",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ipAddress",
+              "value": "={{ $json.Answer[0].data }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Key",
+              "value": "YOUR_ABUSEIPDB_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1568,
+        0
+      ],
+      "id": "645a6a3a-e011-4d57-b650-8786fb27f4dd",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "https://dns.google/resolve",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.scanned_url.replace('https://','').replace('http://','').split('/')[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "42bcab5b-b79a-4131-bf63-8e9a292dc702",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "08ee9e8a-8197-47c0-a1bb-428787605fb2",
+              "name": "resolved_ip",
+              "value": "={{ $json.data.ipAddress }}",
+              "type": "string"
+            },
+            {
+              "id": "a6de3ca3-1961-4973-a315-bb8e6aa60c93",
+              "name": "abuse_score",
+              "value": "={{ $json.data.abuseConfidenceScore }}",
+              "type": "number"
+            },
+            {
+              "id": "b17ffc22-fc26-48b9-a1ad-07d885866538",
+              "name": "ip_verdict",
+              "value": "={{ $json.data.abuseConfidenceScore > 25 ? \"Suspicious IP\" : \"Clean IP\" }}",
+              "type": "string"
+            },
+            {
+              "id": "8cb9f1c5-3b1e-46ee-9e91-ac843afd6099",
+              "name": "scanned_url",
+              "value": "={{ $('Edit Fields').item.json.scanned_url }}",
+              "type": "string"
+            },
+            {
+              "id": "c7819858-0a05-4772-9cad-e0d983d81cce",
+              "name": "verdict",
+              "value": "={{ $('Edit Fields').item.json.verdict }}",
+              "type": "string"
+            },
+            {
+              "id": "0b328452-9bf2-44a5-a27f-9909ca7c231b",
+              "name": "malicious_count",
+              "value": "={{ $('Edit Fields').item.json.malicious_count }}",
+              "type": "number"
+            },
+            {
+              "id": "076d4127-12bd-4cbe-a647-db851e543000",
+              "name": "phishing_verdict",
+              "value": "={{ $('Edit Fields3').item.json.phishing_verdict }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "698ff244-6892-4f1b-b001-81c2195b9f39",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "binaryData": true,
+        "binaryPropertyName": "File"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        128,
+        160
+      ],
+      "id": "97915838-7375-411b-981c-b1134e055349",
+      "name": "Crypto"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "httpVariantWarning": "",
+        "method": "GET",
+        "url": "=https://www.virustotal.com/api/v3/files/{{ $json.data }}",
+        "": "",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "virusTotalApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": false,
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        352,
+        160
+      ],
+      "id": "c376c9d2-bbc9-4884-baf1-d0dd060ce3c8",
+      "name": "VirusTotal HTTP Request2",
+      "extendsCredential": "virusTotalApi",
+      "credentials": {
+        "virusTotalApi": {
+          "id": "TpAWyL56y14FwFwh",
+          "name": "VirusTotal account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2000,
+        0
+      ],
+      "id": "05379efd-0bd1-4829-bddc-dff676616ca7",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "af4274e2-6847-41d8-9be3-d6a7177e024b",
+              "name": "file_malicious_count",
+              "value": "={{ $json.data.attributes.last_analysis_stats.malicious }}",
+              "type": "number"
+            },
+            {
+              "id": "e02300b0-a882-43b0-a202-0faa38ecb702",
+              "name": "file_verdict",
+              "value": "={{ $json.data.attributes.last_analysis_stats.malicious > 0 ? \"Malicious\" : \"Clean\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        544,
+        208
+      ],
+      "id": "3eafb05c-f64a-4716-a478-4e27ad08fe14",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Threat Check Complete",
+        "completionMessage": "=URL: {{ $json.scanned_url }} — {{ $json.verdict }}\nIP: {{ $json.resolved_ip }} — {{ $json.ip_verdict }}\nFile: {{ $json.file_verdict }} ({{ $json.file_malicious_count }} engines flagged)\nPhishing Check: {{ $json.phishing_verdict }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2224,
+        0
+      ],
+      "id": "e24a4eb3-3458-40fe-818e-1550cd3091a6",
+      "name": "Form",
+      "webhookId": "aabe0140-ae84-41ce-9877-4de2081551fd"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=URL: {{ $json.scanned_url }}\nURL Verdict: {{ $json.verdict }}\nIP: {{ $json.resolved_ip }}\nIP Verdict: {{ $json.ip_verdict }}\nFile Verdict: {{ $json.file_verdict }} ({{ $json.file_malicious_count }} engines flagged)\nPhishing Check: {{ $json.phishing_verdict }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2224,
+        176
+      ],
+      "id": "842cd12d-c397-4b96-9726-ee39ab297563",
+      "name": "Send a text message",
+      "webhookId": "7d3a0bc1-a705-4c74-80c3-2311cdafbd9c",
+      "credentials": {
+        "telegramApi": {
+          "id": "FUzPiDbShn2LgGjv",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9a34de84-79ee-426d-8299-644e0cdbdaae",
+              "name": "phishing_score",
+              "value": "={{ ($json.scanned_url.includes('@') ? 1 : 0) + ($json.scanned_url.match(/^https?:\\/\\/\\d+\\.\\d+\\.\\d+\\.\\d+/) ? 1 : 0) + ($json.scanned_url.startsWith('http://') ? 1 : 0) + ((($json.scanned_url.match(/-/g) || []).length) > 3 ? 1 : 0) + ($json.scanned_url.length > 75 ? 1 : 0) + (/login|verify|secure|account|update|confirm/i.test($json.scanned_url) ? 1 : 0) }}",
+              "type": "number"
+            },
+            {
+              "id": "340a8112-daea-4153-878f-702bd0bd3ba6",
+              "name": "phishing_verdict",
+              "value": "={{ (($json.scanned_url.includes('@') ? 1 : 0) + ($json.scanned_url.match(/^https?:\\/\\/\\d+\\.\\d+\\.\\d+\\.\\d+/) ? 1 : 0) + ($json.scanned_url.startsWith('http://') ? 1 : 0) + ((($json.scanned_url.match(/-/g) || []).length) > 3 ? 1 : 0) + ($json.scanned_url.length > 75 ? 1 : 0) + (/login|verify|secure|account|update|confirm/i.test($json.scanned_url) ? 1 : 0)) >= 2 ? \"Possible Phishing Indicators\" : \"No Phishing Indicators Detected\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "33c4c40b-9b23-4129-80e7-e0878d87bd40",
+      "name": "Edit Fields3"
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "VirusTotal HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VirusTotal HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "VirusTotal HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VirusTotal HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto": {
+      "main": [
+        [
+          {
+            "node": "VirusTotal HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VirusTotal HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
